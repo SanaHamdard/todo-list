@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>To-Do List</title>
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Nunito', sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background: linear-gradient(135deg, #4a90e2, #a1c4fd);
+            color: #fff;
+            margin: 0;
+        }
+
+        .container {
+            text-align: center;
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 15px;
+            color: #333;
+            box-shadow: 0 6px 10px rgba(0, 0, 0, 0.3);
+            max-width: 450px;
+            width: 100%;
+            animation: fadeIn 1s ease;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: scale(0.9);
+            }
+
+            to {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+
+        h1 {
+            font-size: 28px;
+            margin-bottom: 5px;
+        }
+
+        #date-time,
+        #quote {
+            font-style: italic;
+            margin-bottom: 15px;
+        }
+
+        #task-input,
+        #start-time,
+        #end-time {
+            width: 70%;
+            padding: 10px;
+            font-size: 16px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            margin: 5px 0;
+        }
+
+        #emoji-picker {
+            cursor: pointer;
+            margin-left: 10px;
+            font-size: 24px;
+            vertical-align: middle;
+        }
+
+        #add-task-btn {
+            padding: 10px;
+            font-size: 16px;
+            background-color: #4caf50;
+            color: #fff;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+            margin-top: 5px;
+        }
+
+        #add-task-btn:hover {
+            background-color: #43a047;
+        }
+
+        #task-list {
+            list-style-type: none;
+            padding: 0;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .task {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px;
+            background-color: #f8f9fa;
+            border-radius: 5px;
+            margin-bottom: 5px;
+            transition: transform 0.3s;
+        }
+
+        .task span {
+            flex-grow: 1;
+            margin-left: 10px;
+        }
+
+        .done {
+            text-decoration: line-through;
+            color: gray;
+        }
+
+        .progress-bar {
+            height: 8px;
+            background-color: #4caf50;
+            border-radius: 5px;
+            margin-top: 10px;
+            transition: width 0.3s;
+        }
+
+        button.delete-btn {
+            background-color: transparent;
+            border: none;
+            cursor: pointer;
+            color: #ff5555;
+            font-size: 20px;
+        }
+
+        #progress-bar-container {
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>To-Do List 📋</h1>
+        <p id="quote"></p>
+        <p id="date-time"></p>
+
+        <!-- Progress bar section -->
+        <div id="progress-bar-container">
+            <span>Progress:</span>
+            <div id="progress-bar" class="progress-bar" style="width: 0%;"></div>
+        </div>
+
+        <input type="text" id="task-input" placeholder="Add your task" />
+        <span id="emoji-picker">😊</span>
+        <br>
+
+        <!-- Time inputs in one line -->
+        <div style="display: flex; align-items: center; justify-content: center;">
+            <label for="start-time">From:</label>
+            <input type="time" id="start-time" placeholder="From" style="width: 80px; margin: 0 5px;">
+            <label for="end-time">To:</label>
+            <input type="time" id="end-time" placeholder="End time" style="width: 80px; margin: 0 5px;">
+        </div>
+        <br>
+        <button id="add-task-btn">ADD</button>
+        <ul id="task-list"></ul>
+    </div>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", () => {
+            const taskInput = document.getElementById("task-input");
+            const addTaskBtn = document.getElementById("add-task-btn");
+            const taskList = document.getElementById("task-list");
+            const dateTimeDisplay = document.getElementById("date-time");
+            const progressBar = document.getElementById("progress-bar");
+            const quoteDisplay = document.getElementById("quote");
+            const emojiPicker = document.getElementById("emoji-picker");
+            const startTimeInput = document.getElementById("start-time");
+            const endTimeInput = document.getElementById("end-time");
+
+            // Updated Motivational Quotes
+            const quotes = [
+                "Act as if what you do makes a difference. It does.",
+                "Success usually comes to those who are too busy to be looking for it.",
+                "The only way to do great work is to love what you do.",
+                "You don't have to be great to start, but you have to start to be great.",
+                "If you want to achieve greatness stop asking for permission.",
+                "I find that the harder I work, the more luck I seem to have."
+            ];
+
+            // Display a new quote every day
+            const today = new Date().getDate();
+            quoteDisplay.textContent = quotes[today % quotes.length];
+
+            // Display current date and time
+            function updateDateTime() {
+                const now = new Date();
+                dateTimeDisplay.textContent = now.toLocaleString();
+            }
+            setInterval(updateDateTime, 1000);
+
+            // Load tasks from local storage
+            let tasks = JSON.parse(localStorage.getItem("tasks")) || [];
+
+            // Function to render tasks
+            function renderTasks() {
+                taskList.innerHTML = "";
+                tasks.forEach((task, index) => {
+                    const taskItem = document.createElement("li");
+                    taskItem.classList.add("task");
+                    if (task.done) taskItem.classList.add("done");
+
+                    const checkBox = document.createElement("input");
+                    checkBox.type = "checkbox";
+                    checkBox.checked = task.done;
+                    checkBox.addEventListener("change", () => toggleTask(index));
+
+                    const taskText = document.createElement("span");
+                    taskText.textContent = task.text + (task.start ? ` (from ${task.start} to ${task.end})` : "");
+
+                    const deleteBtn = document.createElement("button");
+                    deleteBtn.classList.add("delete-btn");
+                    deleteBtn.innerHTML = "🗑️"; // You can replace this with a better trash icon
+                    deleteBtn.addEventListener("click", () => deleteTask(index));
+
+                    taskItem.appendChild(checkBox);
+                    taskItem.appendChild(taskText);
+                    taskItem.appendChild(deleteBtn);
+                    taskList.appendChild(taskItem);
+                });
+                updateProgressBar();
+                saveTasks();
+            }
+
+            // Function to add a task
+            function addTask() {
+                const taskText = taskInput.value.trim();
+                const startTime = startTimeInput.value;
+                const endTime = endTimeInput.value;
+
+                if (taskText !== "") {
+                    tasks.push({ text: taskText, start: startTime, end: endTime, done: false });
+                    taskInput.value = "";
+                    startTimeInput.value = "";
+                    endTimeInput.value = "";
+                    renderTasks();
+                }
+            }
+
+            // Emoji picker functionality
+            emojiPicker.addEventListener("click", () => {
+                taskInput.value += "😊"; // Default emoji
+            });
+
+            // Function to toggle task completion
+            function toggleTask(index) {
+                tasks[index].done = !tasks[index].done;
+                renderTasks();
+            }
+
+            // Function to delete a task
+            function deleteTask(index) {
+                tasks.splice(index, 1);
+                renderTasks();
+            }
+
+            // Function to save tasks to local storage
+            function saveTasks() {
+                localStorage.setItem("tasks", JSON.stringify(tasks));
+            }
+
+            // Function to update progress bar
+            function updateProgressBar() {
+                const totalTasks = tasks.length;
+                const completedTasks = tasks.filter(task => task.done).length;
+                const progressPercent = totalTasks > 0 ? (completedTasks / totalTasks) * 100 : 0;
+                progressBar.style.width = progressPercent + "%";
+            }
+
+            // Event listener for add task button
+            addTaskBtn.addEventListener("click", addTask);
+            taskInput.addEventListener("keypress", (e) => {
+                if (e.key === "Enter") addTask();
+            });
+
+            // Initial render
+            renderTasks();
+        });
+    </script>
+</body>
+
+</html>
